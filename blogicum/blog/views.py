@@ -2,6 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +12,7 @@ from blog.models import Category, Post
 
 
 User = get_user_model()
+POSTS_PER_PAGE = 10
 
 
 def filtering_posts():
@@ -24,9 +26,15 @@ def filtering_posts():
 
 def index(request):
     """Render the main page."""
-    posts = filtering_posts()[:5]
+    posts = filtering_posts().select_related(
+        'author',
+        'category',
+        'location',
+    )
+    paginator = Paginator(posts, POSTS_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-    return render(request, 'blog/index.html', {'post_list': posts})
+    return render(request, 'blog/index.html', {'page_obj': page_obj})
 
 
 def post_detail(request, post_id):
@@ -47,9 +55,15 @@ def category_posts(request, category_slug):
         is_published=True,
     )
 
-    posts = filtering_posts().filter(category=category)
+    posts = filtering_posts().filter(category=category).select_related(
+        'author',
+        'category',
+        'location',
+    )
+    paginator = Paginator(posts, POSTS_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-    context = {'category': category, 'post_list': posts}
+    context = {'category': category, 'page_obj': page_obj}
     return render(request, 'blog/category.html', context)
 
 
@@ -59,6 +73,7 @@ class ProfileView(ListView):
     model = Post
     template_name = 'blog/profile.html'
     context_object_name = 'post_list'
+    paginate_by = POSTS_PER_PAGE
 
     def get_profile(self):
         """Return the profile owner requested in the URL."""
