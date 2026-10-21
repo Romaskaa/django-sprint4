@@ -100,6 +100,11 @@ class Post(BaseModel):
         blank=False,
         verbose_name="Категория",
     )
+    image = models.ImageField(
+        'Изображение',
+        upload_to='blog_images',
+        blank=True,
+    )
 
     class Meta:
         """Set human-readable model names."""
