@@ -26,7 +26,17 @@ urlpatterns = [
     path(
         'posts/<int:post_id>/edit/',
         views.PostUpdateView.as_view(),
-        name='edit_post'
+        name='edit_post',
+    ),
+    path(
+        'posts/<int:post_id>/comment/',
+        views.CommentCreateView.as_view(),
+        name='add_comment',
+    ),
+    path(
+        'posts/<int:post_id>/edit_comment/<int:comment_id>/',
+        views.CommentUpdateView.as_view(),
+        name='edit_comment',
     ),
     path('posts/<int:post_id>/', views.post_detail, name='post_detail'),
     path(

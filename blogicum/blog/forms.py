@@ -1,6 +1,6 @@
 from django import forms
 
-from blog.models import Post
+from blog.models import Post, Comment
 
 
 class PostForm(forms.ModelForm):
@@ -21,3 +21,11 @@ class PostForm(forms.ModelForm):
                 attrs={'type': 'datetime-local'},
             ),
         }
+
+
+class CommentForm(forms.ModelForm):
+    """Form for commenting posts"""
+
+    class Meta:
+        model = Comment
+        fields = ('text',)

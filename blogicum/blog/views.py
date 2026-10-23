@@ -3,13 +3,14 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, ListView, UpdateView
 
-from blog.forms import PostForm
-from blog.models import Category, Post
+from blog.forms import CommentForm, PostForm
+from blog.models import Category, Comment, Post
 
 
 User = get_user_model()
@@ -22,6 +23,8 @@ def filtering_posts():
         pub_date__lte=timezone.now(),
         is_published=True,
         category__is_published=True,
+    ).annotate(
+        comment_count=Count('comments'),
     )
 
 
@@ -55,7 +58,15 @@ def post_detail(request, post_id):
             pk=post_id,
         )
 
-    return render(request, 'blog/detail.html', {'post': post})
+    comments = post.comments.select_related('author').order_by('created_at')
+
+    context = {
+        'post': post,
+        'form': CommentForm(),
+        'comments': comments,
+    }
+
+    return render(request, 'blog/detail.html', context)
 
 
 def category_posts(request, category_slug):
@@ -102,6 +113,8 @@ class ProfileView(ListView):
             'author',
             'category',
             'location',
+        ).annotate(
+            comment_count=Count('comments'),
         )
         if self.request.user != profile_user:
             posts = posts.filter(
@@ -182,4 +195,77 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
         return reverse(
             'blog:post_detail',
             kwargs={'post_id': self.object.pk},
+        )
+
+
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    """Create comment"""
+
+    form_class = CommentForm
+    template_name = 'blog/detail.html'
+    login_url = 'login'
+
+    def get_post(self):
+        post = get_object_or_404(
+            Post.objects.select_related('author', 'category'),
+            pk=self.kwargs['post_id'],
+        )
+
+        if self.request.user != post.author:
+            post = get_object_or_404(
+                filtering_posts(),
+                pk=post.pk,
+            )
+
+        return post
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = self.get_post()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        post = self.get_post()
+        context['post'] = post
+        context['comments'] = post.comments.select_related(
+            'author'
+        ).order_by('created_at')
+
+        return context
+
+    def get_success_url(self):
+        return reverse(
+            'blog:post_detail',
+            kwargs={'post_id': self.object.post_id},
+        )
+
+
+class CommentUpdateView(LoginRequiredMixin, UpdateView):
+
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'comment_id'
+    login_url = 'login'
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            post_id=self.kwargs['post_id'],
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            comment = self.get_object()
+            if comment.author != request.user:
+                return redirect(
+                    'blog:post_detail',
+                    post_id=comment.post_id,
+                )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse(
+            'blog:post_detail',
+            kwargs={'post_id': self.object.post_id},
         )
