@@ -6,8 +6,9 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.generic import ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView
 
+from blog.forms import PostForm
 from blog.models import Category, Post
 
 
@@ -38,11 +39,21 @@ def index(request):
 
 
 def post_detail(request, post_id):
-    """Render a publication page placeholder."""
+    """Display a publication according to access permissions."""
     post = get_object_or_404(
-        filtering_posts(),
+        Post.objects.select_related(
+            'author',
+            'category',
+            'location',
+        ),
         pk=post_id,
     )
+
+    if request.user != post.author:
+        post = get_object_or_404(
+            filtering_posts(),
+            pk=post_id,
+        )
 
     return render(request, 'blog/detail.html', {'post': post})
 
@@ -123,4 +134,25 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return reverse(
             'blog:profile',
             kwargs={'username': self.object.username},
+        )
+
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    """Create a new publication."""
+
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/create.html'
+    login_url = 'login'
+
+    def form_valid(self, form):
+        """Assign the current user as the publication author."""
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        """Redirect to the author's profile after creation."""
+        return reverse(
+            'blog:profile',
+            kwargs={'username': self.request.user.username},
         )
