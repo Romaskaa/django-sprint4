@@ -7,7 +7,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from blog.forms import CommentForm, PostForm
 from blog.models import Category, Comment, Post
@@ -198,6 +198,32 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
         )
 
 
+class PostDeleteView(LoginRequiredMixin, DeleteView):
+    "Delete the post"
+    model = Post
+    template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
+    login_url = 'login'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            post = self.get_object()
+            if post.author != request.user:
+                return redirect(
+                    'blog:post_detail',
+                    post_id=post.pk,
+                )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = PostForm(instance=self.object)
+        return context
+
+    def get_success_url(self):
+        return reverse('blog:index')
+
+
 class CommentCreateView(LoginRequiredMixin, CreateView):
     """Create comment"""
 
@@ -258,6 +284,35 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         if request.user.is_authenticated:
             comment = self.get_object()
             if comment.author != request.user:
+                return redirect(
+                    'blog:post_detail',
+                    post_id=comment.post_id,
+                )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse(
+            'blog:post_detail',
+            kwargs={'post_id': self.object.post_id},
+        )
+
+
+class CommentDeleteView(LoginRequiredMixin, DeleteView):
+    "Delete the comment"
+    model = Comment
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'comment_id'
+    login_url = 'login'
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            post_id=self.kwargs['post_id'],
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            comment  = self.get_object()
+            if comment .author != request.user:
                 return redirect(
                     'blog:post_detail',
                     post_id=comment.post_id,
