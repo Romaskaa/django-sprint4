@@ -172,7 +172,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class PostUpdateView(LoginRequiredMixin, UpdateView):
-    "Edit an existing post"
+    """Edit an existing post"""
 
     model = Post
     form_class = PostForm
@@ -199,7 +199,8 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
-    "Delete the post"
+    """Delete the post"""
+
     model = Post
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
@@ -298,7 +299,8 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
-    "Delete the comment"
+    """Delete the comment"""
+
     model = Comment
     template_name = 'blog/comment.html'
     pk_url_kwarg = 'comment_id'
@@ -311,7 +313,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            comment  = self.get_object()
+            comment = self.get_object()
             if comment .author != request.user:
                 return redirect(
                     'blog:post_detail',
