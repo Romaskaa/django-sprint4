@@ -3,7 +3,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, ListView, UpdateView
@@ -155,4 +155,31 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username},
+        )
+
+
+class PostUpdateView(LoginRequiredMixin, UpdateView):
+    "Edit an existing post"
+
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
+    login_url = 'login'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            post = self.get_object()
+            if post.author != request.user:
+                return redirect(
+                    'blog:post_detail',
+                    post_id=post.pk,
+                )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self):
+
+        return reverse(
+            'blog:post_detail',
+            kwargs={'post_id': self.object.pk},
         )
