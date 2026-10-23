@@ -25,7 +25,7 @@ def filtering_posts():
         category__is_published=True,
     ).annotate(
         comment_count=Count('comments'),
-    )
+    ).order_by('-pub_date')
 
 
 def index(request):
@@ -115,7 +115,7 @@ class ProfileView(ListView):
             'location',
         ).annotate(
             comment_count=Count('comments'),
-        )
+        ).order_by('-pub_date')
         if self.request.user != profile_user:
             posts = posts.filter(
                 pub_date__lte=timezone.now(),
