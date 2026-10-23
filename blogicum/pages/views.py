@@ -1,16 +1,15 @@
 """Views for static project pages."""
 
 from django.shortcuts import render
+from django.views.generic import TemplateView
 
 
-def about(request):
-    """Render the project information page."""
-    return render(request, 'pages/about.html')
+class AboutView(TemplateView):
+    template_name = 'pages/about.html'
 
 
-def rules(request):
-    """Render the project rules page."""
-    return render(request, 'pages/rules.html')
+class RulesView(TemplateView):
+    template_name = 'pages/rules.html'
 
 
 def page_not_found(request, exception):
